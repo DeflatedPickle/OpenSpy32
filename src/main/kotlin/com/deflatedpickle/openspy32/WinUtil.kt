@@ -1,6 +1,7 @@
 package com.deflatedpickle.openspy32
 
 import com.sun.jna.Native
+import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef
 import com.sun.jna.platform.win32.WinUser
@@ -63,5 +64,31 @@ object WinUtil {
         }, null)
 
         return monitors
+    }
+
+    fun getWindowRect(hwnd: WinDef.HWND): WinDef.RECT {
+        val rect = WinDef.RECT()
+        User32.INSTANCE.GetWindowRect(hwnd, rect)
+        return rect
+    }
+
+    fun getClientRect(hwnd: WinDef.HWND): WinDef.RECT {
+        val rect = WinDef.RECT()
+        User32.INSTANCE.GetClientRect(hwnd, rect)
+        return rect
+    }
+
+    fun getWindowPlacement(hwnd: WinDef.HWND): WinUser.WINDOWPLACEMENT {
+        val placement = WinUser.WINDOWPLACEMENT()
+        User32.INSTANCE.GetWindowPlacement(hwnd, placement)
+        return placement
+    }
+
+    fun hexToHandle(hex: String): Pointer {
+        return Pointer(java.lang.Long.decode(hex))
+    }
+
+    fun handleToHex(handle: Pointer): String {
+        return handle.toString().split("@")[1]
     }
 }
