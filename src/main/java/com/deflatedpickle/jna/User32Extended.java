@@ -37,4 +37,6 @@ public interface User32Extended extends User32 {
     int WS_EX_WINDOWEDGE = 0x00000100;
 
     WinDef.HMENU GetMenu(WinDef.HWND hWnd);
+
+    WinDef.HWND GetTopWindow(WinDef.HWND hWnd);
 }

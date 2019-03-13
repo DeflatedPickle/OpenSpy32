@@ -90,6 +90,7 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
                 layoutData = GridData(SWT.FILL, SWT.FILL, true, true)
             }
 
+            // TODO: Make a widget for RECT values, displaying them better
             addLabelEntry(sizeAndPositionGroup, "Window Rectangle").apply {
                 this.second.text = WinUtil.getWindowRect(hwnd!!).toString()
             }
@@ -98,6 +99,18 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
             }
             addLabelEntry(sizeAndPositionGroup, "Client Rectangle").apply {
                 this.second.text = WinUtil.getClientRect(hwnd!!).toString()
+            }
+            addLabelEntry(sizeAndPositionGroup, "Window State").apply {
+                this.second.text = when (WinUtil.getWindowPlacement(hwnd!!).showCmd) {
+                    1 -> { "Normal" }
+                    2 -> { "Minimized" }
+                    3 -> { "Maximized" }
+                    8 -> { "N/A" }
+                    else -> { "" }
+                }
+            }
+            addLabelEntry(sizeAndPositionGroup, "Z Order").apply {
+                this.second.text = WinUtil.zOrder.indexOf(hwnd).toString()
             }
 
             (this.control as ScrolledComposite).setMinSize(control.computeSize(SWT.DEFAULT, SWT.DEFAULT))

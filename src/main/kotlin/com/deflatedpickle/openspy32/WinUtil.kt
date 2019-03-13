@@ -9,6 +9,8 @@ import com.sun.jna.platform.win32.WinUser
 import com.sun.jna.ptr.IntByReference
 
 object WinUtil {
+    val zOrder = getZList()
+
     fun getMonitorWindows(monitor: WinUser.HMONITOR): List<WinDef.HWND> {
         val windows: MutableList<WinDef.HWND> = mutableListOf()
 
@@ -91,6 +93,18 @@ object WinUtil {
 
     fun handleToHex(handle: Pointer): String {
         return handle.toString().split("@")[1]
+    }
+
+    private fun getZList(): List<WinDef.HWND> {
+        val zOrder = mutableListOf<WinDef.HWND>()
+
+        var next = User32Extended.INSTANCE.GetTopWindow(null)
+        while (next != null) {
+            zOrder.add(next)
+            next = User32.INSTANCE.GetWindow(next, WinDef.DWORD(User32.GW_HWNDNEXT.toLong()))
+        }
+
+        return zOrder
     }
 
     fun getWindowStyles(hwnd: WinDef.HWND): List<String> {
