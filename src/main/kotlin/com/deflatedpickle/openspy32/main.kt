@@ -6,6 +6,9 @@ import com.sun.jna.platform.win32.WinUser
 import com.sun.jna.ptr.IntByReference
 import org.eclipse.jface.window.ApplicationWindow
 import org.eclipse.swt.SWT
+import org.eclipse.swt.events.SelectionAdapter
+import org.eclipse.swt.events.SelectionEvent
+import org.eclipse.swt.events.SelectionListener
 import org.eclipse.swt.graphics.Point
 import org.eclipse.swt.widgets.*
 
@@ -83,13 +86,52 @@ fun main(args: Array<String>) {
             }
 
             tree.addListener(SWT.MouseDoubleClick) {
-                val point = Point(it.x, it.y)
+                if (it.button == 1) {
+                    val point = Point(it.x, it.y)
+                    val item = tree.getItem(point)
+
+                    if (item != null) {
+                        val propertiies = PropertiesDialog(shell)
+                        propertiies.hwnd = WinDef.HWND(WinUtil.hexToHandle(item.getText(3)))
+                        propertiies.open()
+                    }
+                }
+            }
+
+            var selectedItem: TreeItem? = null
+
+            val contextMenu = Menu(tree)
+            tree.menu = contextMenu
+
+            MenuItem(contextMenu, SWT.NONE).apply {
+                text = "Properties"
+
+                this.addSelectionListener(object : SelectionAdapter() {
+                    override fun widgetDefaultSelected(e: SelectionEvent) {
+                        val propertiies = PropertiesDialog(shell)
+                        propertiies.hwnd = WinDef.HWND(WinUtil.hexToHandle(selectedItem!!.getText(3)))
+                        propertiies.open()
+                    }
+
+                    override fun widgetSelected(e: SelectionEvent) {
+                        widgetDefaultSelected(e)
+                    }
+                })
+            }
+            // MenuItem(contextMenu, SWT.NONE).apply { text = "Message Log" }
+            // MenuItem(contextMenu, SWT.NONE).apply { text = "Highlight" }
+            // MenuItem(contextMenu, SWT.SEPARATOR)
+            // MenuItem(contextMenu, SWT.NONE).apply { text = "Refresh" }
+
+            tree.addListener(SWT.MenuDetect) {
+                val point = tree.toControl(Point(it.x, it.y))
                 val item = tree.getItem(point)
 
-                if (item != null) {
-                    val propertiies = PropertiesDialog(shell)
-                    propertiies.hwnd = WinDef.HWND(WinUtil.hexToHandle(item.getText(3)))
-                    propertiies.open()
+                if (item == null) {
+                    it.doit = false
+                }
+                else {
+                    selectedItem = item
                 }
             }
 

@@ -38,49 +38,37 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
             }
         }
 
-        fun addLabelEntry(item: TabItem, text: String): Pair<Label, Text> {
-            val label = Label((item.control as ScrolledComposite).content as Composite, SWT.RIGHT).apply {
+        fun addLabelEntry(item: Composite, text: String): Pair<Label, Text> {
+            val label = Label(item, SWT.RIGHT).apply {
                 this.text = "$text:"
                 layoutData = GridData(SWT.FILL, SWT.CENTER, true, false)
             }
-            val entry = Text((item.control as ScrolledComposite).content as Composite, SWT.BORDER or SWT.READ_ONLY).apply {
+            val entry = Text(item, SWT.BORDER or SWT.READ_ONLY).apply {
                 layoutData = GridData(SWT.FILL, SWT.CENTER, true, false)
             }
 
             return Pair(label, entry)
         }
 
-        fun addSeparator(item: TabItem) {
-            Label((item.control as ScrolledComposite).content as Composite, SWT.SEPARATOR or SWT.HORIZONTAL).apply {
-                layoutData = GridData().apply {
-                    horizontalSpan = 2
-                    horizontalAlignment = SWT.FILL
+        addItem("General", 1).apply {
+            val propertiesGroup = Group((this.control as ScrolledComposite).content as Composite, SWT.NONE).apply {
+                text = "Properties"
+                layout = GridLayout().apply {
+                    numColumns = 2
                 }
+                layoutData = GridData(SWT.FILL, SWT.FILL, true, true)
             }
-        }
 
-        addItem("General", 2).apply {
-            addLabelEntry(this, "Window Caption").apply {
+            addLabelEntry(propertiesGroup, "Window Caption").apply {
                 this.second.text = WinUtil.getTitle(hwnd!!)
             }
-            addLabelEntry(this, "Window Handle").apply {
+            addLabelEntry(propertiesGroup, "Window Handle").apply {
                 this.second.text = WinUtil.handleToHex(hwnd!!.pointer)
             }
             // addLabelEntry(this, "Window Proc")
-            addLabelEntry(this, "Window Rectangle").apply {
-                this.second.text = WinUtil.getWindowRect(hwnd!!).toString()
-            }
-            addLabelEntry(this, "Restored Rectangle").apply {
-                this.second.text = WinUtil.getWindowPlacement(hwnd!!).rcNormalPosition.toString()
-            }
-            addLabelEntry(this, "Client Rectangle").apply {
-                this.second.text = WinUtil.getClientRect(hwnd!!).toString()
-            }
             // addLabelEntry(this, "Instance Handle")
 
-            addSeparator(this)
-
-            addLabelEntry(this, "Menu Handle").apply {
+            addLabelEntry(propertiesGroup, "Menu Handle").apply {
                 var pointer = "null"
 
                 if (User32Extended.INSTANCE.GetMenu(hwnd) != null) {
@@ -90,11 +78,27 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
                 this.second.text = pointer
             }
 
-            addSeparator(this)
-
             // TODO: Find where these are supposed to come from
             // addLabelEntry(this, "User Data")
             // addLabelEntry(this, "Window Bytes")
+
+            val sizeAndPositionGroup = Group((this.control as ScrolledComposite).content as Composite, SWT.NONE).apply {
+                text = "Size and Position"
+                layout = GridLayout().apply {
+                    numColumns = 2
+                }
+                layoutData = GridData(SWT.FILL, SWT.FILL, true, true)
+            }
+
+            addLabelEntry(sizeAndPositionGroup, "Window Rectangle").apply {
+                this.second.text = WinUtil.getWindowRect(hwnd!!).toString()
+            }
+            addLabelEntry(sizeAndPositionGroup, "Restored Rectangle").apply {
+                this.second.text = WinUtil.getWindowPlacement(hwnd!!).rcNormalPosition.toString()
+            }
+            addLabelEntry(sizeAndPositionGroup, "Client Rectangle").apply {
+                this.second.text = WinUtil.getClientRect(hwnd!!).toString()
+            }
 
             (this.control as ScrolledComposite).setMinSize(control.computeSize(SWT.DEFAULT, SWT.DEFAULT))
         }
@@ -155,7 +159,7 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
     override fun configureShell(newShell: Shell) {
         super.configureShell(newShell)
         newShell.text = "Property Inspector"
-        newShell.minimumSize = Point(320, 200)
+        newShell.minimumSize = Point(320, 300)
     }
 
     override fun isResizable(): Boolean {
