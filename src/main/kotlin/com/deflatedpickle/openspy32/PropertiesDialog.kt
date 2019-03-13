@@ -1,6 +1,7 @@
 package com.deflatedpickle.openspy32
 
 import com.deflatedpickle.jna.User32Extended
+import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef
 import org.eclipse.jface.dialogs.Dialog
 import org.eclipse.swt.SWT
@@ -10,6 +11,7 @@ import org.eclipse.swt.layout.FillLayout
 import org.eclipse.swt.layout.GridData
 import org.eclipse.swt.layout.GridLayout
 import org.eclipse.swt.widgets.*
+import org.eclipse.swt.widgets.List
 
 class PropertiesDialog(shell: Shell) : Dialog(shell) {
     var hwnd: WinDef.HWND? = null
@@ -20,7 +22,7 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
         val tabFolder = TabFolder(container, SWT.TOP)
         tabFolder.layoutData = GridData(SWT.FILL, SWT.FILL, true, true)
 
-        fun addItem(text: String): TabItem {
+        fun addItem(text: String, columns: Int): TabItem {
             return TabItem(tabFolder, SWT.NULL).apply {
                 this.text = text
                 control = ScrolledComposite(tabFolder, SWT.H_SCROLL or SWT.V_SCROLL).apply {
@@ -30,7 +32,7 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
 
                 (control as ScrolledComposite).content = Composite(control as ScrolledComposite, SWT.NONE).apply {
                     layout = GridLayout().apply {
-                        numColumns = 2
+                        numColumns = columns
                     }
                 }
             }
@@ -49,7 +51,6 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
         }
 
         fun addSeparator(item: TabItem) {
-            println((item.control as ScrolledComposite).isVisible)
             Label((item.control as ScrolledComposite).content as Composite, SWT.SEPARATOR or SWT.HORIZONTAL).apply {
                 layoutData = GridData().apply {
                     horizontalSpan = 2
@@ -58,7 +59,7 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
             }
         }
 
-        addItem("General").apply {
+        addItem("General", 2).apply {
             addLabelEntry(this, "Window Caption").apply {
                 this.second.text = WinUtil.getTitle(hwnd!!)
             }
@@ -94,18 +95,59 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
             // TODO: Find where these are supposed to come from
             // addLabelEntry(this, "User Data")
             // addLabelEntry(this, "Window Bytes")
+
+            (this.control as ScrolledComposite).setMinSize(control.computeSize(SWT.DEFAULT, SWT.DEFAULT))
         }
 
-        // addItem("Styles")
+        addItem("Styles", 4).apply {
+            val content = (this.control as ScrolledComposite).content as Composite
+
+            val normalStyles = User32.INSTANCE.GetWindowLong(hwnd, User32.GWL_STYLE)
+            val extendedStyles = User32.INSTANCE.GetWindowLong(hwnd, User32.GWL_EXSTYLE)
+
+            Label(content, SWT.NONE).apply {
+                text = "Window Styles:"
+            }
+            Text(content, SWT.BORDER or SWT.READ_ONLY).apply {
+                text = normalStyles.toString()
+                layoutData = GridData(SWT.FILL, SWT.CENTER, true, false)
+            }
+
+            Label(content, SWT.NONE).apply {
+                text = "Extended Styles:"
+            }
+            Text(content, SWT.BORDER or SWT.READ_ONLY).apply {
+                text = extendedStyles.toString()
+                layoutData = GridData(SWT.FILL, SWT.CENTER, true, false)
+            }
+
+            List(content, SWT.BORDER or SWT.H_SCROLL or SWT.V_SCROLL).apply {
+                layoutData = GridData(SWT.FILL, SWT.FILL, true, true).apply {
+                    horizontalSpan = 2
+                }
+
+                val styles = WinUtil.getWindowStyles(hwnd!!)
+
+                for (s in styles) {
+                    this.add(s)
+                }
+            }
+
+            List(content, SWT.BORDER or SWT.H_SCROLL or SWT.V_SCROLL).apply {
+                layoutData = GridData(SWT.FILL, SWT.FILL, true, true).apply {
+                    horizontalSpan = 2
+                }
+
+                val styles = WinUtil.getExtendedStyles(hwnd!!)
+
+                for (s in styles) {
+                    this.add(s)
+                }
+            }
+        }
         // addItem("Windows")
         // addItem("Class")
         // addItem("Process")
-
-        for (tab in tabFolder.items) {
-            val control = tab.control as ScrolledComposite
-            println(control.size)
-            control.setMinSize(control.computeSize(SWT.DEFAULT, SWT.DEFAULT))
-        }
 
         return container
     }
@@ -121,6 +163,6 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
     }
 
     override fun getInitialSize(): Point {
-        return Point(320, 400)
+        return Point(420, 400)
     }
 }

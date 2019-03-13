@@ -1,6 +1,5 @@
 package com.deflatedpickle.openspy32
 
-import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef
 import com.sun.jna.platform.win32.WinUser
@@ -66,6 +65,7 @@ fun main(args: Array<String>) {
                     val process = IntByReference(0)
                     val thread = User32.INSTANCE.GetWindowThreadProcessId(window, process)
 
+                    // TODO: Set the icon of the item to the windows icon
                     item.setText(
                         arrayOf(
                             WinUtil.getTitle(window),
