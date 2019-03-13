@@ -3,11 +3,12 @@ package com.deflatedpickle.openspy32
 import com.deflatedpickle.jna.User32Extended
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef
+import com.sun.jna.ptr.IntByReference
 import org.eclipse.jface.dialogs.Dialog
+import org.eclipse.jface.window.Window
 import org.eclipse.swt.SWT
 import org.eclipse.swt.custom.ScrolledComposite
 import org.eclipse.swt.graphics.Point
-import org.eclipse.swt.layout.FillLayout
 import org.eclipse.swt.layout.GridData
 import org.eclipse.swt.layout.GridLayout
 import org.eclipse.swt.widgets.*
@@ -15,6 +16,10 @@ import org.eclipse.swt.widgets.List
 
 class PropertiesDialog(shell: Shell) : Dialog(shell) {
     var hwnd: WinDef.HWND? = null
+
+    init {
+        shellStyle = (SWT.DIALOG_TRIM or SWT.APPLICATION_MODAL or SWT.RESIZE or Window.getDefaultOrientation())
+    }
 
     override fun createDialogArea(parent: Composite?): Control {
         val container = super.createDialogArea(parent) as Composite
@@ -38,16 +43,54 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
             }
         }
 
-        fun addLabelEntry(item: Composite, text: String): Pair<Label, Text> {
-            val label = Label(item, SWT.RIGHT).apply {
+        fun addLabelEntry(item: Composite, text: String, labelWidth: Int = 120, labelSpan: Int = 1, textSpan: Int = 1): Text {
+            Label(item, SWT.RIGHT).apply {
                 this.text = "$text:"
-                layoutData = GridData(SWT.FILL, SWT.CENTER, true, false)
+                layoutData = GridData(SWT.RIGHT, SWT.CENTER, false, false).apply {
+                    horizontalSpan = labelSpan
+                }
             }
-            val entry = Text(item, SWT.BORDER or SWT.READ_ONLY).apply {
+            return Text(item, SWT.BORDER or SWT.READ_ONLY).apply {
+                layoutData = GridData(SWT.FILL, SWT.CENTER, true, false).apply {
+                    horizontalSpan = textSpan
+                }
+            }
+        }
+
+        fun addLabelRect(item: Composite, text: String, rect: WinDef.RECT): kotlin.collections.List<Text> {
+            var leftWidget: Text?
+            var topWidget: Text?
+            var widthWidget: Text?
+            var heightWidget: Text?
+            var resolutionWidget: Text?
+
+            Label(item, SWT.RIGHT).apply {
+                this.text = "$text:"
+                layoutData = GridData(SWT.RIGHT, SWT.CENTER, false, false)
+            }
+            Composite(item, SWT.NONE).apply {
+                layout = GridLayout().apply {
+                    numColumns = 4
+                }
                 layoutData = GridData(SWT.FILL, SWT.CENTER, true, false)
+
+                val width = rect.right - rect.left
+                val height = rect.bottom - rect.top
+
+                val labelWidth = 40
+                leftWidget = addLabelEntry(this, "Left", labelWidth).apply { setText(rect.left.toString()) }
+                topWidget = addLabelEntry(this, "Top", labelWidth).apply { setText(rect.top.toString()) }
+                widthWidget = addLabelEntry(this, "Width", labelWidth).apply { setText(rect.right.toString()) }
+                heightWidget = addLabelEntry(this, "Height", labelWidth).apply { setText(rect.bottom.toString()) }
+                resolutionWidget = addLabelEntry(this, "Resolution", 60, 1, 3).apply { setText("${width}x$height") }
+            }
+            Label(item, SWT.SEPARATOR or SWT.HORIZONTAL).apply {
+                layoutData = GridData(GridData.FILL_HORIZONTAL).apply {
+                    horizontalSpan = 2
+                }
             }
 
-            return Pair(label, entry)
+            return listOf(leftWidget!!, topWidget!!, widthWidget!!, heightWidget!!, resolutionWidget!!)
         }
 
         addItem("General", 1).apply {
@@ -56,14 +99,14 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
                 layout = GridLayout().apply {
                     numColumns = 2
                 }
-                layoutData = GridData(SWT.FILL, SWT.FILL, true, true)
+                layoutData = GridData(GridData.FILL_BOTH)
             }
 
             addLabelEntry(propertiesGroup, "Window Caption").apply {
-                this.second.text = WinUtil.getTitle(hwnd!!)
+                this.text = WinUtil.getTitle(hwnd!!)
             }
             addLabelEntry(propertiesGroup, "Window Handle").apply {
-                this.second.text = WinUtil.handleToHex(hwnd!!.pointer)
+                this.text = WinUtil.handleToHex(hwnd!!.pointer)
             }
             // addLabelEntry(this, "Window Proc")
             // addLabelEntry(this, "Instance Handle")
@@ -75,7 +118,7 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
                     pointer = WinUtil.handleToHex(User32Extended.INSTANCE.GetMenu(hwnd).pointer)
                 }
 
-                this.second.text = pointer
+                this.text = pointer
             }
 
             // TODO: Find where these are supposed to come from
@@ -87,55 +130,40 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
                 layout = GridLayout().apply {
                     numColumns = 2
                 }
-                layoutData = GridData(SWT.FILL, SWT.FILL, true, true)
+                layoutData = GridData(GridData.FILL_BOTH)
             }
 
-            // TODO: Make a widget for RECT values, displaying them better
-            addLabelEntry(sizeAndPositionGroup, "Window Rectangle").apply {
-                this.second.text = WinUtil.getWindowRect(hwnd!!).toString()
-            }
-            addLabelEntry(sizeAndPositionGroup, "Restored Rectangle").apply {
-                this.second.text = WinUtil.getWindowPlacement(hwnd!!).rcNormalPosition.toString()
-            }
-            addLabelEntry(sizeAndPositionGroup, "Client Rectangle").apply {
-                this.second.text = WinUtil.getClientRect(hwnd!!).toString()
-            }
+            addLabelRect(sizeAndPositionGroup, "Window Rectangle", WinUtil.getWindowRect(hwnd!!))
+            addLabelRect(sizeAndPositionGroup, "Restored Rectangle", WinUtil.getWindowPlacement(hwnd!!).rcNormalPosition)
+            addLabelRect(sizeAndPositionGroup, "Client Rectangle", WinUtil.getClientRect(hwnd!!))
+
             addLabelEntry(sizeAndPositionGroup, "Window State").apply {
-                this.second.text = when (WinUtil.getWindowPlacement(hwnd!!).showCmd) {
-                    1 -> { "Normal" }
-                    2 -> { "Minimized" }
-                    3 -> { "Maximized" }
-                    8 -> { "N/A" }
+                this.text = when (WinUtil.getWindowPlacement(hwnd!!).showCmd) {
+                    User32.SW_NORMAL -> { "Normal" }
+                    User32.SW_SHOWMINIMIZED -> { "Minimized" }
+                    User32.SW_SHOWMAXIMIZED -> { "Maximized" }
                     else -> { "" }
                 }
             }
             addLabelEntry(sizeAndPositionGroup, "Z Order").apply {
-                this.second.text = WinUtil.zOrder.indexOf(hwnd).toString()
+                this.text = WinUtil.zOrder.indexOf(hwnd!!).toString()
             }
 
             (this.control as ScrolledComposite).setMinSize(control.computeSize(SWT.DEFAULT, SWT.DEFAULT))
         }
 
-        addItem("Styles", 4).apply {
+        addItem("Styles", 5).apply {
             val content = (this.control as ScrolledComposite).content as Composite
 
             val normalStyles = User32.INSTANCE.GetWindowLong(hwnd, User32.GWL_STYLE)
             val extendedStyles = User32.INSTANCE.GetWindowLong(hwnd, User32.GWL_EXSTYLE)
 
-            Label(content, SWT.NONE).apply {
-                text = "Window Styles:"
-            }
-            Text(content, SWT.BORDER or SWT.READ_ONLY).apply {
-                text = normalStyles.toString()
-                layoutData = GridData(SWT.FILL, SWT.CENTER, true, false)
+            addLabelEntry((this.control as ScrolledComposite).content as Composite, "Window Styles").apply {
+                this.text = normalStyles.toString()
             }
 
-            Label(content, SWT.NONE).apply {
-                text = "Extended Styles:"
-            }
-            Text(content, SWT.BORDER or SWT.READ_ONLY).apply {
-                text = extendedStyles.toString()
-                layoutData = GridData(SWT.FILL, SWT.CENTER, true, false)
+            addLabelEntry((this.control as ScrolledComposite).content as Composite, "Extended Styles").apply {
+                this.text = extendedStyles.toString()
             }
 
             List(content, SWT.BORDER or SWT.H_SCROLL or SWT.V_SCROLL).apply {
@@ -162,9 +190,18 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
                 }
             }
         }
-        // addItem("Windows")
         // addItem("Class")
-        // addItem("Process")
+        addItem("Process", 2).apply {
+            val process = IntByReference(0)
+            val thread = User32.INSTANCE.GetWindowThreadProcessId(hwnd!!, process)
+
+            addLabelEntry((this.control as ScrolledComposite).content as Composite, "Process ID").apply {
+                this.text = process.value.toString()
+            }
+            addLabelEntry((this.control as ScrolledComposite).content as Composite, "Thread ID").apply {
+                this.text = thread.toString()
+            }
+        }
 
         return container
     }
@@ -175,11 +212,7 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
         newShell.minimumSize = Point(320, 300)
     }
 
-    override fun isResizable(): Boolean {
-        return true
-    }
-
     override fun getInitialSize(): Point {
-        return Point(420, 400)
+        return Point(440, 400)
     }
 }
