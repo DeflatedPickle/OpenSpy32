@@ -9,6 +9,8 @@ import org.eclipse.swt.SWT
 import org.eclipse.swt.events.SelectionAdapter
 import org.eclipse.swt.events.SelectionEvent
 import org.eclipse.swt.events.SelectionListener
+import org.eclipse.swt.graphics.GC
+import org.eclipse.swt.graphics.Image
 import org.eclipse.swt.graphics.Point
 import org.eclipse.swt.widgets.*
 
@@ -25,14 +27,14 @@ fun main(args: Array<String>) {
             val tree = Tree(parent, SWT.FULL_SELECTION or SWT.VIRTUAL or SWT.H_SCROLL or SWT.V_SCROLL or SWT.BORDER)
             tree.headerVisible = true
 
-            val titles = listOf("Name", "Window Class", "Process ID", "Handle", "Thread ID")
+            val titles = listOf(Pair("Name", 200), Pair("Window Class", 140), Pair("Process ID", 70), Pair("Handle", 60), Pair("Thread ID", 60))
 
             for (t in titles) {
                 val column = TreeColumn(tree, SWT.NULL)
-                column.text = t
+                column.text = t.first
 
                 column.pack()
-                column.width = 100
+                column.width = t.second
             }
 
             val monitorList = WinUtil.getAllDisplays()
@@ -68,7 +70,6 @@ fun main(args: Array<String>) {
                     val process = IntByReference(0)
                     val thread = User32.INSTANCE.GetWindowThreadProcessId(window, process)
 
-                    // TODO: Set the icon of the item to the windows icon
                     item.setText(
                         arrayOf(
                             WinUtil.getTitle(window),
@@ -78,6 +79,21 @@ fun main(args: Array<String>) {
                             thread.toString()
                         )
                     )
+
+                    val icon = Image.win32_new(shell.display, SWT.ICON, User32.INSTANCE.GetClassLong(window, User32.GCL_HICON).toLong())
+                    if (!icon.isDisposed) {
+                        val boundWidth = icon.imageData.width
+                        val boundHeight = icon.imageData.height
+
+                        val zoom = 1.0 / 1.6
+                        val finalIcon = Image(shell.display, icon.imageData.scaledTo((boundWidth * zoom).toInt(),
+                            (boundHeight * zoom).toInt()
+                        ))
+
+                        if (!finalIcon.isDisposed) {
+                            item.image = finalIcon
+                        }
+                    }
 
                     val windowList = WinUtil.getChildWindows(window)
                     item.itemCount = windowList.size
