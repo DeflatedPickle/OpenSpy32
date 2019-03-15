@@ -1,15 +1,31 @@
 package com.deflatedpickle.openspy32
 
+import com.deflatedpickle.jna.Shell32Extended
 import com.deflatedpickle.jna.User32Extended
 import com.sun.jna.Native
 import com.sun.jna.Pointer
-import com.sun.jna.platform.win32.User32
-import com.sun.jna.platform.win32.WinDef
-import com.sun.jna.platform.win32.WinUser
+import com.sun.jna.platform.win32.*
+import com.sun.jna.platform.win32.WinNT.*
 import com.sun.jna.ptr.IntByReference
+
 
 object WinUtil {
     val zOrder = getZList()
+    var isAdmin = false
+
+    init {
+        isAdmin = Shell32Extended.INSTANCE.IsUserAnAdmin()
+    }
+
+    fun getProcessHandle(processID: Int): HANDLEByReference {
+        val process = Kernel32.INSTANCE.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, processID)
+        val processHandle = HANDLEByReference()
+
+        Advapi32.INSTANCE.OpenProcessToken(process, TOKEN_QUERY, processHandle)
+        Kernel32.INSTANCE.CloseHandle(process)
+
+        return processHandle
+    }
 
     fun getMonitorWindows(monitor: WinUser.HMONITOR): List<WinDef.HWND> {
         val windows: MutableList<WinDef.HWND> = mutableListOf()

@@ -1,9 +1,6 @@
 package com.deflatedpickle.openspy32
 
 import com.deflatedpickle.jna.User32Extended
-import com.sun.jna.Native
-import com.sun.jna.Pointer
-import com.sun.jna.platform.win32.Kernel32
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef
 import com.sun.jna.ptr.IntByReference
@@ -13,6 +10,8 @@ import org.eclipse.swt.SWT
 import org.eclipse.swt.custom.ScrolledComposite
 import org.eclipse.swt.graphics.Image
 import org.eclipse.swt.graphics.Point
+import org.eclipse.swt.internal.win32.OS
+import org.eclipse.swt.internal.win32.TCHAR
 import org.eclipse.swt.layout.GridData
 import org.eclipse.swt.layout.GridLayout
 import org.eclipse.swt.widgets.*
@@ -23,6 +22,40 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
 
     init {
         shellStyle = (SWT.DIALOG_TRIM or SWT.APPLICATION_MODAL or SWT.RESIZE or Window.getDefaultOrientation())
+    }
+
+    inline fun <reified T : Control>addLabelEntry(item: Composite, text: String, labelWidth: Int = 120, labelSpan: Int = 1, textSpan: Int = 1): T {
+        Label(item, SWT.RIGHT).apply {
+            this.text = "$text:"
+            layoutData = GridData(SWT.RIGHT, SWT.CENTER, false, false).apply {
+                horizontalSpan = labelSpan
+            }
+        }
+
+        val style = if (WinUtil.isAdmin) SWT.BORDER else SWT.BORDER or SWT.READ_ONLY
+        val second = when (T::class.java.typeName) {
+            "org.eclipse.swt.widgets.Text" -> {
+                Text(item, style)
+            }
+            "org.eclipse.swt.widgets.Label" -> {
+                Label(item, SWT.None)
+            }
+            "org.eclipse.swt.widgets.Combo" -> {
+                Combo(item, style)
+            }
+            "org.eclipse.swt.widgets.Spinner" -> {
+                Spinner(item, style)
+            }
+            else -> {
+                Label(item, SWT.None)
+            }
+        }
+        second.apply {
+            layoutData = GridData(SWT.FILL, SWT.CENTER, true, false).apply {
+                horizontalSpan = textSpan
+            }
+        }
+        return second as T
     }
 
     override fun createDialogArea(parent: Composite?): Control {
@@ -47,26 +80,12 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
             }
         }
 
-        fun addLabelEntry(item: Composite, text: String, labelWidth: Int = 120, labelSpan: Int = 1, textSpan: Int = 1): Text {
-            Label(item, SWT.RIGHT).apply {
-                this.text = "$text:"
-                layoutData = GridData(SWT.RIGHT, SWT.CENTER, false, false).apply {
-                    horizontalSpan = labelSpan
-                }
-            }
-            return Text(item, SWT.BORDER or SWT.READ_ONLY).apply {
-                layoutData = GridData(SWT.FILL, SWT.CENTER, true, false).apply {
-                    horizontalSpan = textSpan
-                }
-            }
-        }
-
-        fun addLabelRect(item: Composite, text: String, rect: WinDef.RECT): kotlin.collections.List<Text> {
-            var leftWidget: Text?
-            var topWidget: Text?
-            var widthWidget: Text?
-            var heightWidget: Text?
-            var resolutionWidget: Text?
+        fun addLabelRect(item: Composite, text: String, rect: WinDef.RECT): kotlin.collections.List<Control> {
+            var leftWidget: Spinner? = null
+            var topWidget: Spinner? = null
+            var widthWidget: Spinner? = null
+            var heightWidget: Spinner? = null
+            var resolutionWidget: Label? = null
 
             Label(item, SWT.RIGHT).apply {
                 this.text = "$text:"
@@ -82,11 +101,11 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
                 val height = rect.bottom - rect.top
 
                 val labelWidth = 40
-                leftWidget = addLabelEntry(this, "Left", labelWidth).apply { setText(rect.left.toString()) }
-                topWidget = addLabelEntry(this, "Top", labelWidth).apply { setText(rect.top.toString()) }
-                widthWidget = addLabelEntry(this, "Width", labelWidth).apply { setText(rect.right.toString()) }
-                heightWidget = addLabelEntry(this, "Height", labelWidth).apply { setText(rect.bottom.toString()) }
-                resolutionWidget = addLabelEntry(this, "Resolution", 60, 1, 3).apply { setText("${width}x$height") }
+                leftWidget = addLabelEntry<Spinner>(this, "Left", labelWidth).apply { setText(rect.left.toString()) }
+                topWidget = addLabelEntry<Spinner>(this, "Top", labelWidth).apply { setText(rect.top.toString()) }
+                widthWidget = addLabelEntry<Spinner>(this, "Width", labelWidth).apply { setText(rect.right.toString()) }
+                heightWidget = addLabelEntry<Spinner>(this, "Height", labelWidth).apply { setText(rect.bottom.toString()) }
+                resolutionWidget = addLabelEntry<Label>(this, "Resolution", 60, 1, 3).apply { setText("${width}x$height") }
             }
             Label(item, SWT.SEPARATOR or SWT.HORIZONTAL).apply {
                 layoutData = GridData(GridData.FILL_HORIZONTAL).apply {
@@ -106,20 +125,20 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
                 layoutData = GridData(GridData.FILL_BOTH)
             }
 
-            addLabelEntry(propertiesGroup, "Window Caption").apply {
+            addLabelEntry<Text>(propertiesGroup, "Window Caption").apply {
                 this.text = WinUtil.getTitle(hwnd!!)
             }
-            addLabelEntry(propertiesGroup, "Window Handle").apply {
+            addLabelEntry<Label>(propertiesGroup, "Window Handle").apply {
                 this.text = WinUtil.handleToHex(hwnd!!.pointer)
             }
-            addLabelEntry(propertiesGroup, "Window Proc").apply {
+            addLabelEntry<Label>(propertiesGroup, "Window Proc").apply {
                 this.text = User32.INSTANCE.GetWindowLong(hwnd, User32.GWL_WNDPROC).toString()
             }
-            addLabelEntry(propertiesGroup, "Instance Handle").apply {
+            addLabelEntry<Label>(propertiesGroup, "Instance Handle").apply {
                 // FIXME: Seems to always be 0, probably grabbing it wrong
                 this.text = User32.INSTANCE.GetWindowLong(hwnd, User32.GWL_HINSTANCE).toString()
             }
-            addLabelEntry(propertiesGroup, "Menu Handle").apply {
+            addLabelEntry<Text>(propertiesGroup, "Menu Handle").apply {
                 var pointer = "null"
 
                 if (User32Extended.INSTANCE.GetMenu(hwnd) != null) {
@@ -128,7 +147,7 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
 
                 this.text = pointer
             }
-            addLabelEntry(propertiesGroup, "User Data").apply {
+            addLabelEntry<Label>(propertiesGroup, "User Data").apply {
                 this.text = User32.INSTANCE.GetWindowLong(hwnd, User32.GWL_USERDATA).toString()
             }
             // addLabelEntry(this, "Window Bytes")
@@ -145,7 +164,10 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
             addLabelRect(sizeAndPositionGroup, "Restored Rectangle", WinUtil.getWindowPlacement(hwnd!!).rcNormalPosition)
             addLabelRect(sizeAndPositionGroup, "Client Rectangle", WinUtil.getClientRect(hwnd!!))
 
-            addLabelEntry(sizeAndPositionGroup, "Window State").apply {
+            addLabelEntry<Combo>(sizeAndPositionGroup, "Window State").apply {
+                add("Normal")
+                add("Minimized")
+                add("Maximized")
                 this.text = when (WinUtil.getWindowPlacement(hwnd!!).showCmd) {
                     User32.SW_NORMAL -> { "Normal" }
                     User32.SW_SHOWMINIMIZED -> { "Minimized" }
@@ -153,24 +175,25 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
                     else -> { "" }
                 }
             }
-            addLabelEntry(sizeAndPositionGroup, "Z Order").apply {
-                this.text = WinUtil.zOrder.indexOf(hwnd!!).toString()
+            addLabelEntry<Spinner>(sizeAndPositionGroup, "Z Order").apply {
+                setText(WinUtil.zOrder.indexOf(hwnd!!).toString())
             }
 
             (this.control as ScrolledComposite).setMinSize(control.computeSize(SWT.DEFAULT, SWT.DEFAULT))
         }
 
+        // TODO: Add buttons to add/remove styles
         addItem("Styles", 5).apply {
             val widget = (this.control as ScrolledComposite).content as Composite
 
             val normalStyles = User32.INSTANCE.GetWindowLong(hwnd, User32.GWL_STYLE)
             val extendedStyles = User32.INSTANCE.GetWindowLong(hwnd, User32.GWL_EXSTYLE)
 
-            addLabelEntry(widget, "Window Styles").apply {
+            addLabelEntry<Label>(widget, "Window Styles").apply {
                 this.text = normalStyles.toString()
             }
 
-            addLabelEntry(widget, "Extended Styles").apply {
+            addLabelEntry<Label>(widget, "Extended Styles").apply {
                 this.text = extendedStyles.toString()
             }
 
@@ -202,40 +225,40 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
         addItem("Class", 2).apply {
             val widget = (this.control as ScrolledComposite).content as Composite
 
-            addLabelEntry(widget, "Class Name").apply { text = WinUtil.getClass(hwnd!!) }
-            addLabelEntry(widget, "Class Style").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCL_STYLE).toString() }
-            addLabelEntry(widget, "Small Icon Handle").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCL_HICONSM).toString() }
-            addLabelEntry(widget, "Icon Handle").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCL_HICON).toString() }
+            addLabelEntry<Label>(widget, "Class Name").apply { text = WinUtil.getClass(hwnd!!) }
+            addLabelEntry<Label>(widget, "Class Style").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCL_STYLE).toString() }
+            // addLabelEntry<Label>(widget, "Small Icon Handle").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCL_HICONSM).toString() }
+            addLabelEntry<Text>(widget, "Icon Handle").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCL_HICON).toString() }
 
             val icon = Image.win32_new(shell.display, SWT.ICON, User32.INSTANCE.GetClassLong(hwnd, User32.GCL_HICON).toLong())
             if (!icon.isDisposed) {
                 Label(widget, SWT.RIGHT).apply {
                     this.image = icon
-                    layoutData = GridData(GridData.FILL_BOTH).apply {
+                    layoutData = GridData(GridData.FILL_HORIZONTAL).apply {
                         horizontalSpan = 2
                     }
                 }
             }
 
-            addLabelEntry(widget, "Cursor Handle").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCLP_HCURSOR).toString() }
+            addLabelEntry<Text>(widget, "Cursor Handle").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCLP_HCURSOR).toString() }
 
             val cursorIcon = Image.win32_new(shell.display, SWT.ICON, User32.INSTANCE.GetClassLong(hwnd, User32.GCLP_HCURSOR).toLong())
             if (!cursorIcon.isDisposed) {
                 Label(widget, SWT.RIGHT).apply {
                     image = cursorIcon
-                    layoutData = GridData(GridData.FILL_BOTH).apply {
+                    layoutData = GridData(GridData.FILL_HORIZONTAL).apply {
                         horizontalSpan = 2
                     }
                 }
             }
 
-            addLabelEntry(widget, "Background Brush Handle").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCLP_HBRBACKGROUND).toString() }
-            addLabelEntry(widget, "Module Handle").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCLP_HMODULE).toString() }
-            addLabelEntry(widget, "Extra Class Memory").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCL_CBCLSEXTRA).toString() }
-            addLabelEntry(widget, "Extra Window Memory").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCL_CBWNDEXTRA).toString() }
-            addLabelEntry(widget, "Atom").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCW_ATOM).toString() }
-            addLabelEntry(widget, "Menu Name").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCLP_MENUNAME).toString() }
-            addLabelEntry(widget, "Window Proc").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCLP_WNDPROC).toString() }
+            addLabelEntry<Text>(widget, "Background Brush Handle").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCLP_HBRBACKGROUND).toString() }
+            addLabelEntry<Label>(widget, "Module Handle").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCLP_HMODULE).toString() }
+            addLabelEntry<Label>(widget, "Extra Class Memory").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCL_CBCLSEXTRA).toString() }
+            addLabelEntry<Label>(widget, "Extra Window Memory").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCL_CBWNDEXTRA).toString() }
+            addLabelEntry<Label>(widget, "Atom").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCW_ATOM).toString() }
+            addLabelEntry<Label>(widget, "Menu Name").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCLP_MENUNAME).toString() }
+            addLabelEntry<Label>(widget, "Window Proc").apply { text = User32.INSTANCE.GetClassLong(hwnd, User32.GCLP_WNDPROC).toString() }
 
             (this.control as ScrolledComposite).setMinSize(control.computeSize(SWT.DEFAULT, SWT.DEFAULT))
         }
@@ -244,12 +267,10 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
             val process = IntByReference(0)
             val thread = User32.INSTANCE.GetWindowThreadProcessId(hwnd!!, process)
 
-            addLabelEntry((this.control as ScrolledComposite).content as Composite, "Process ID").apply {
-                this.text = process.value.toString()
-            }
-            addLabelEntry((this.control as ScrolledComposite).content as Composite, "Thread ID").apply {
-                this.text = thread.toString()
-            }
+            val widget = (this.control as ScrolledComposite).content as Composite
+
+            addLabelEntry<Label>(widget, "Process ID").apply { this.text = process.value.toString() }
+            addLabelEntry<Label>(widget, "Thread ID").apply { this.text = thread.toString() }
         }
 
         return container
@@ -263,5 +284,20 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
 
     override fun getInitialSize(): Point {
         return Point(440, 400)
+    }
+
+    fun Spinner.setText(value: String) {
+        val checkWidget = Widget::class.java.getDeclaredMethod("checkWidget")
+        checkWidget.isAccessible = true
+        val getCodePage = Control::class.java.getDeclaredMethod("getCodePage")
+        getCodePage.isAccessible = true
+
+        val hwndText = Spinner::class.java.getDeclaredField("hwndText")
+        hwndText.isAccessible = true
+
+        checkWidget.invoke(this)
+        val buffer = TCHAR(getCodePage.invoke(this).toString().toInt(), value, true)
+
+        OS.SetWindowText(hwndText.getLong(this), buffer)
     }
 }
