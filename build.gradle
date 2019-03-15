@@ -41,8 +41,6 @@ dependencies {
 configurations.all {
     resolutionStrategy {
         dependencySubstitution {
-            // The maven property ${osgi.platform} is not handled by Gradle
-            // so we replace the dependency, using the osgi platform from the project settings
             substitute module('org.eclipse.platform:org.eclipse.swt.${osgi.platform}') with module("org.eclipse.platform:org.eclipse.swt.$osgi_platform:$swt_version")
         }
     }
@@ -59,8 +57,12 @@ application {
     mainClassName = 'com.deflatedpickle.openspy32.MainKt'
 }
 
+shadowJar.archiveName = "OpenSpy32.jar"
+
 launch4j {
     mainClassName = 'com.deflatedpickle.openspy32.MainKt'
     copyConfigurable = project.tasks.shadowJar.outputs.files
     jar = "lib/${project.tasks.shadowJar.archiveName}"
+    outfile = "OpenSpy32.exe"
+    outputDir = 'libs'
 }

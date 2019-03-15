@@ -1,0 +1,25 @@
+os: windows
+language: shell
+install: true
+branches:
+  only:
+  - master
+before_script:
+- choco install jdk8 -params 'installdir=c:\\java8'
+- export PATH=$PATH:"/c/java8/bin"
+- choco install gradle --version 4.10 -params 'installdir=c:\\gradle'
+- export PATH=$PATH:"/c/gradle/bin"
+script:
+- gradle build
+# - gradle launch4j
+deploy:
+  provider: releases
+  api_key:
+    secure: GBldPf8tm960qvh5/TXjtKNZihe1W5IsEl3LMJQ0xsE5Dd/0El3wAax4pJ4GE18Xfvsdi6TX23mwgOXXcrTzTvruVLm8aySuehy+/yEqBWnGq6yEOhP4jf5SBNM2ksAfJuTHhGfs27Un9UCRA56PLE5A8Z9Xi4z8fHqpoa9GUFFWlCJlyyc8lm1Jr/ZSAfBzYssXMUNS7sNwj7RbEIHB9OfGn4tZJP7Flw8WkTU51jlSmHGhL2Z+BDRisfqa+24lazVNcXn42iPmjSx876va/kQHVt5wtK6fuaZUmLY330jAI1gi2l5xJSe9ry79bKCsdhG05zPDr6DBk5aBC7r+N5QSlqAACWGECDGmyPGzeOV7ZzuFNMkKFQOV8VucGM3yW4IeCLzueo09tyu2QyOLitnQG1zEY5Usiw/IJg+rFeLvIg+UA+H0nUT6JaEC6aUYcfUdV/9bPe8BGYb6QS/qJQ4jbt9M99w0zlXU/SamudJZAcRKAoYwbtnl4WuS0cE4DB9ZgxHWwU35yznJLsfJSKbZ+irVOCo0+/OWhglQbLPyGrO/BwCW3c/jEMYPcB0l/O/ro2Hi9+1U1NDIkmOfmzZJ85zsO03xh9Zm61jHvByFasj9iBxipdAe5cVxOr/IxtHXGkeWtpFiLUm/LVo5gED4mTFUWHsIi2YkGKxTziI=
+  file:
+    - "c:\\Users\\travis\\build\\DeflatedPickle\\OpenSpy32\\build\\libs\\OpenSpy32.jar"
+    - "c:\\Users\\travis\\build\\DeflatedPickle\\OpenSpy32\\build\\libs\\OpenSpy32.exe"
+  on:
+    repo: DeflatedPickle/OpenSpy32
+  draft: true
+  skip_cleanup: true
