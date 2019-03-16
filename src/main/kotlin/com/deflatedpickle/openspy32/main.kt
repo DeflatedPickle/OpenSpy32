@@ -17,7 +17,7 @@ fun main(args: Array<String>) {
         override fun create() {
             super.create()
 
-            shell.text = "OpenSpy32"
+            shell.text = "OpenSpy32" + if(WinUtil.isAdmin) " - Admin" else ""
             shell.setMinimumSize(400, 400)
         }
 

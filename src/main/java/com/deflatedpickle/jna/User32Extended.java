@@ -39,4 +39,6 @@ public interface User32Extended extends User32 {
     WinDef.HMENU GetMenu(WinDef.HWND hWnd);
 
     WinDef.HWND GetTopWindow(WinDef.HWND hWnd);
+
+    boolean SetWindowText(WinDef.HWND hwnd, String lpString);
 }
