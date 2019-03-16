@@ -1,6 +1,7 @@
 package com.deflatedpickle.jna;
 
 import com.sun.jna.Native;
+import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.win32.W32APIOptions;
@@ -36,7 +37,17 @@ public interface User32Extended extends User32 {
     int WS_EX_TRANSPARENT = 0x00000020;
     int WS_EX_WINDOWEDGE = 0x00000100;
 
-    WinDef.HMENU GetMenu(WinDef.HWND hWnd);
+    HWND HWND_BOTTOM = new HWND(new Pointer(1L));
+    HWND HWND_NOTOPMOST = new HWND(new Pointer(-2L));
+    HWND HWND_TOP = new HWND(new Pointer(0L));
+    HWND HWND_TOPMOST = new HWND(new Pointer(-1L));
 
-    WinDef.HWND GetTopWindow(WinDef.HWND hWnd);
+    HMENU GetMenu(HWND hWnd);
+    boolean SetMenu(HWND hWnd, HMENU hMenu);
+
+    HWND GetTopWindow(HWND hWnd);
+
+    boolean SetWindowText(HWND hwnd, String lpString);
+
+    int SetClassLong(HWND hWnd, int nIndex, long dwNewLong);
 }

@@ -8,8 +8,6 @@ import org.eclipse.jface.window.ApplicationWindow
 import org.eclipse.swt.SWT
 import org.eclipse.swt.events.SelectionAdapter
 import org.eclipse.swt.events.SelectionEvent
-import org.eclipse.swt.events.SelectionListener
-import org.eclipse.swt.graphics.GC
 import org.eclipse.swt.graphics.Image
 import org.eclipse.swt.graphics.Point
 import org.eclipse.swt.widgets.*
@@ -19,7 +17,7 @@ fun main(args: Array<String>) {
         override fun create() {
             super.create()
 
-            shell.text = "OpenSpy32"
+            shell.text = "OpenSpy32" + if(WinUtil.isAdmin) " - Admin" else ""
             shell.setMinimumSize(400, 400)
         }
 
