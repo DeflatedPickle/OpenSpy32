@@ -409,19 +409,4 @@ class PropertiesDialog(shell: Shell) : Dialog(shell) {
     override fun getInitialSize(): Point {
         return Point(440, 400)
     }
-
-    fun Spinner.setText(value: String) {
-        val checkWidget = Widget::class.java.getDeclaredMethod("checkWidget")
-        checkWidget.isAccessible = true
-        val getCodePage = Control::class.java.getDeclaredMethod("getCodePage")
-        getCodePage.isAccessible = true
-
-        val hwndText = Spinner::class.java.getDeclaredField("hwndText")
-        hwndText.isAccessible = true
-
-        checkWidget.invoke(this)
-        val buffer = TCHAR(getCodePage.invoke(this).toString().toInt(), value, true)
-
-        OS.SetWindowText(hwndText.getLong(this), buffer)
-    }
 }
